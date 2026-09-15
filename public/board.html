@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>KINETIC // Kanban Flow Board</title>
+  <title>KINETIC // Group Workspace & Board</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><rect width='7' height='9' x='3' y='3' rx='1'/><rect width='7' height='5' x='14' y='3' rx='1'/><rect width='7' height='9' x='14' y='12' rx='1'/><rect width='7' height='5' x='3' y='16' rx='1'/></svg>">
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -16,32 +16,11 @@
       background-size: 24px 24px;
     }
     .font-brand { font-family: 'Space Grotesk', sans-serif; }
-    .glass-nav {
-      background: rgba(11, 15, 25, 0.85);
-      backdrop-filter: blur(18px);
-      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-    }
-    .kanban-lane {
-      background: rgba(17, 24, 39, 0.6);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.05);
-      min-height: 550px;
-    }
-    .task-card {
-      background: rgba(26, 34, 52, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      cursor: grab;
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .task-card:active { cursor: grabbing; }
-    .task-card:hover {
-      border-color: rgba(56, 189, 248, 0.4);
-      transform: translateY(-2px);
-    }
-    .lane-drag-over {
-      border-color: rgba(56, 189, 248, 0.8) !important;
-      background: rgba(14, 165, 233, 0.08) !important;
-    }
+    .glass-nav { background: rgba(11, 15, 25, 0.85); backdrop-filter: blur(18px); border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+    .kanban-lane { background: rgba(17, 24, 39, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.05); min-height: 550px; }
+    .task-card { background: rgba(26, 34, 52, 0.85); border: 1px solid rgba(255, 255, 255, 0.08); cursor: pointer; transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+    .task-card:hover { border-color: rgba(56, 189, 248, 0.4); transform: translateY(-2px); }
+    .lane-drag-over { border-color: rgba(56, 189, 248, 0.8) !important; background: rgba(14, 165, 233, 0.08) !important; }
   </style>
 </head>
 <body class="text-slate-100 min-h-screen flex flex-col antialiased">
@@ -62,10 +41,19 @@
       </div>
     </div>
 
-    <button onclick="openTaskModal()" class="px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition shadow-lg shadow-sky-600/20 flex items-center gap-1.5">
-      <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-      <span>Add Task</span>
-    </button>
+    <div class="flex items-center gap-2.5">
+      <!-- Team Members Modal Trigger -->
+      <button onclick="openMemberModal()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition">
+        <i data-lucide="users" class="w-3.5 h-3.5 text-sky-400"></i>
+        <span id="member-count">Team</span>
+      </button>
+
+      <!-- Add Task Trigger -->
+      <button onclick="openTaskModal()" class="px-3.5 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition shadow-lg shadow-sky-600/20 flex items-center gap-1.5">
+        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+        <span>Add Task</span>
+      </button>
+    </div>
   </header>
 
   <!-- Kanban Grid Layout -->
@@ -123,22 +111,99 @@
     </div>
   </main>
 
-  <!-- Create Task Modal -->
+  <!-- 1. DETAILED IN-TASK MODAL (Comments, Checklists & Assign) -->
+  <div id="task-detail-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-[#111827] max-w-xl w-full rounded-2xl p-6 border border-slate-700 shadow-2xl relative max-h-[90vh] flex flex-col">
+      <button onclick="closeDetailModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">&times;</button>
+      
+      <div class="mb-4">
+        <div class="flex items-center gap-2 mb-1">
+          <span id="modal-priority-badge" class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md"></span>
+          <span id="modal-stage-badge" class="text-[10px] uppercase font-bold text-slate-400"></span>
+        </div>
+        <h2 id="modal-task-title" class="text-lg font-bold text-white leading-tight"></h2>
+        <p id="modal-task-desc" class="text-xs text-slate-400 mt-2 leading-relaxed"></p>
+        <div class="flex items-center gap-4 mt-3 text-[11px] text-slate-400 pt-2 border-t border-slate-800">
+          <div><span class="text-slate-500">Assign To:</span> <span id="modal-assignee" class="text-white font-semibold"></span></div>
+          <div><span class="text-slate-500">Due:</span> <span id="modal-due" class="text-white font-mono"></span></div>
+        </div>
+      </div>
+
+      <!-- Subtasks / Checklist Section (Trello/Asana) -->
+      <div class="mb-4 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+            <i data-lucide="check-square" class="w-3.5 h-3.5 text-sky-400"></i>
+            Subtask Checklist
+          </span>
+          <span id="checklist-progress" class="text-[10px] font-mono text-slate-400"></span>
+        </div>
+        <div id="modal-checklists" class="space-y-1.5 max-h-32 overflow-y-auto mb-2 text-xs"></div>
+        <form onsubmit="addChecklistItem(event)" class="flex gap-2">
+          <input type="text" id="new-checklist-text" placeholder="Add a subtask step..." class="flex-1 px-3 py-1.5 rounded-lg bg-slate-950 border border-slate-700 text-xs text-white outline-none focus:border-sky-500">
+          <button type="submit" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded-lg text-xs font-bold">+ Add</button>
+        </form>
+      </div>
+
+      <!-- In-Task Team Discussion Drawer (Comments) -->
+      <div class="flex-1 flex flex-col justify-between overflow-hidden border-t border-slate-800 pt-3">
+        <div class="flex items-center gap-2 mb-2 text-[11px] font-bold text-slate-300 uppercase tracking-wider">
+          <i data-lucide="message-square" class="w-3.5 h-3.5 text-sky-400"></i>
+          <span>Team Discussion (<span id="modal-comment-count">0</span>)</span>
+        </div>
+
+        <div id="modal-comments" class="flex-1 overflow-y-auto space-y-2.5 max-h-48 pr-1 mb-3 text-xs"></div>
+
+        <form onsubmit="postComment(event)" class="flex gap-2 pt-2 border-t border-slate-800">
+          <input type="text" id="comment-input" placeholder="Communicate with teammates on this task..." required class="flex-1 px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-sky-500">
+          <button type="submit" class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-1">
+            <i data-lucide="send" class="w-3 h-3"></i>
+            <span>Reply</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. TEAM MEMBERS / COLLABORATORS MODAL -->
+  <div id="member-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-[#111827] max-w-sm w-full rounded-2xl p-6 border border-slate-700 shadow-2xl relative">
+      <button onclick="closeMemberModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">&times;</button>
+      <h3 class="text-sm font-bold text-white mb-1">Group Project Collaborators</h3>
+      <p class="text-xs text-slate-400 mb-4">Invite teammates by email to access and edit this Kanban board.</p>
+
+      <form onsubmit="addTeamMember(event)" class="flex gap-2 mb-4">
+        <input type="email" id="invite-email" placeholder="colleague@example.com" required class="flex-1 px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-sky-500">
+        <button type="submit" class="px-3.5 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold">Invite</button>
+      </form>
+
+      <div class="border-t border-slate-800 pt-3">
+        <span class="text-[10px] uppercase font-bold text-slate-500 block mb-2">Active Team Units</span>
+        <div id="members-list" class="space-y-1.5 max-h-40 overflow-y-auto text-xs"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. CREATE TASK MODAL -->
   <div id="task-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
-    <div class="task-card max-w-md w-full rounded-2xl p-6 border border-slate-700 shadow-2xl relative">
+    <div class="bg-[#111827] max-w-md w-full rounded-2xl p-6 border border-slate-700 shadow-2xl relative">
       <button onclick="closeTaskModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">&times;</button>
       <h2 class="text-base font-bold text-white mb-1">Create Kanban Task</h2>
-      <p class="text-slate-400 text-xs mb-4">Append an actionable task to the active workflow</p>
+      <p class="text-slate-400 text-xs mb-4">Assign work to yourself or a group team member</p>
       <form onsubmit="handleCreateTask(event)" class="space-y-3">
         <div>
           <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Task Title</label>
-          <input type="text" id="task-title" placeholder="e.g. Audit WebSocket reconnect jitter" required class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-sky-500">
+          <input type="text" id="task-title" placeholder="e.g. Implement WebSocket heartbeat" required class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-sky-500">
         </div>
         <div>
           <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Description</label>
-          <textarea id="task-desc" placeholder="Details and technical criteria..." rows="2" class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-sky-500 resize-none"></textarea>
+          <textarea id="task-desc" placeholder="Scope and specifications..." rows="2" class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-sky-500 resize-none"></textarea>
         </div>
         <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Assign To</label>
+            <input type="text" id="task-assignee" placeholder="e.g. Abinash Das" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-sky-500">
+          </div>
           <div>
             <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Priority</label>
             <select id="task-priority" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-sky-500">
@@ -148,15 +213,15 @@
               <option value="Critical">Critical</option>
             </select>
           </div>
-          <div>
-            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Target Stage</label>
-            <select id="task-stage" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-sky-500">
-              <option value="backlog">Backlog</option>
-              <option value="in_progress">In Progress</option>
-              <option value="review">Code Review</option>
-              <option value="done">Done</option>
-            </select>
-          </div>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Target Stage</label>
+          <select id="task-stage" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-sky-500">
+            <option value="backlog">Backlog</option>
+            <option value="in_progress">In Progress</option>
+            <option value="review">Code Review</option>
+            <option value="done">Done</option>
+          </select>
         </div>
         <button type="submit" class="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-lg shadow-sky-600/20">Append Task</button>
       </form>
@@ -166,7 +231,9 @@
   <script>
     const token = localStorage.getItem('kinetic_token');
     const projectId = new URLSearchParams(window.location.search).get('id');
+    let currentActiveTask = null;
     let draggedTaskId = null;
+    let activeTasksCache = [];
 
     if (!token || !projectId) window.location.href = 'index.html';
 
@@ -176,19 +243,27 @@
       });
       if (!res.ok) return window.location.href = 'index.html';
       const { project, tasks } = await res.json();
+      activeTasksCache = tasks;
 
       document.getElementById('board-title').innerText = project.title;
       document.getElementById('board-code').innerText = project.code;
+      document.getElementById('member-count').innerText = `Team (${(project.members || []).length})`;
+
+      // Render members modal list
+      const membersContainer = document.getElementById('members-list');
+      membersContainer.innerHTML = (project.members || []).map(m => `
+        <div class="flex items-center gap-2 p-2 bg-slate-900 rounded-lg border border-slate-800">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <span class="text-slate-300 font-mono text-[11px]">${m}</span>
+        </div>
+      `).join('');
 
       const lanes = { backlog: [], in_progress: [], review: [], done: [] };
-      tasks.forEach(t => {
-        if (lanes[t.stage]) lanes[t.stage].push(t);
-      });
+      tasks.forEach(t => { if (lanes[t.stage]) lanes[t.stage].push(t); });
 
       ['backlog', 'in_progress', 'review', 'done'].forEach(stage => {
         const laneEl = document.getElementById(`lane-${stage}`);
-        const countEl = document.getElementById(`count-${stage}`);
-        countEl.innerText = lanes[stage].length;
+        document.getElementById(`count-${stage}`).innerText = lanes[stage].length;
 
         laneEl.innerHTML = lanes[stage].map(t => {
           let badgeColor = "bg-slate-800 text-slate-300";
@@ -196,16 +271,32 @@
           if (t.priority === 'High') badgeColor = "bg-amber-950 text-amber-400 border border-amber-800/40";
           if (t.priority === 'Medium') badgeColor = "bg-sky-950 text-sky-400 border border-sky-800/40";
 
+          const completedCount = (t.checklists || []).filter(c => c.completed).length;
+          const totalChecklists = (t.checklists || []).length;
+
           return `
-            <div class="task-card rounded-xl p-4 shadow" draggable="true" ondragstart="handleDragStart(event, '${t._id}')" id="task-${t._id}">
+            <div class="task-card rounded-xl p-4 shadow" draggable="true" ondragstart="handleDragStart(event, '${t._id}')" onclick="openTaskDetail('${t._id}')" id="task-${t._id}">
               <div class="flex items-start justify-between gap-2 mb-2">
                 <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md ${badgeColor}">${t.priority}</span>
-                <button onclick="deleteTask('${t._id}')" class="text-slate-500 hover:text-rose-400 transition">&times;</button>
+                <button onclick="event.stopPropagation(); deleteTask('${t._id}')" class="text-slate-500 hover:text-rose-400 transition">&times;</button>
               </div>
               <h4 class="text-xs font-bold text-white mb-1.5 leading-snug">${t.title}</h4>
               ${t.description ? `<p class="text-[11px] text-slate-400 line-clamp-2 leading-relaxed mb-3">${t.description}</p>` : ''}
+              
+              <!-- Checklists & Discussion Counters -->
+              <div class="flex items-center gap-3 text-[10px] text-slate-400 mb-2">
+                ${totalChecklists > 0 ? `
+                  <span class="flex items-center gap-1 ${completedCount === totalChecklists ? 'text-emerald-400 font-bold' : ''}">
+                    <i data-lucide="check-square" class="w-3 h-3"></i> ${completedCount}/${totalChecklists}
+                  </span>
+                ` : ''}
+                <span class="flex items-center gap-1 hover:text-sky-400">
+                  <i data-lucide="message-square" class="w-3 h-3"></i> ${(t.comments || []).length}
+                </span>
+              </div>
+
               <div class="flex items-center justify-between text-[10px] text-slate-500 border-t border-slate-700/60 pt-2.5">
-                <span>${t.assignee}</span>
+                <span class="text-slate-300 font-semibold truncate max-w-[120px]">${t.assignee}</span>
                 <span class="font-mono">${t.dueDate}</span>
               </div>
             </div>
@@ -215,7 +306,150 @@
       lucide.createIcons();
     }
 
-    // Drag and Drop Logic
+    // --- IN-TASK DETAIL & COMMUNICATION MODAL ---
+    function openTaskDetail(taskId) {
+      const task = activeTasksCache.find(t => t._id === taskId);
+      if (!task) return;
+      currentActiveTask = task;
+
+      document.getElementById('modal-task-title').innerText = task.title;
+      document.getElementById('modal-task-desc').innerText = task.description || 'No detailed specifications added.';
+      document.getElementById('modal-assignee').innerText = task.assignee;
+      document.getElementById('modal-due').innerText = task.dueDate;
+      document.getElementById('modal-priority-badge').innerText = task.priority;
+      document.getElementById('modal-stage-badge').innerText = task.stage.replace('_', ' ');
+
+      // Render Checklists
+      renderChecklists(task);
+
+      // Render Comments Feed
+      renderComments(task);
+
+      document.getElementById('task-detail-modal').classList.replace('hidden', 'flex');
+      lucide.createIcons();
+    }
+
+    function renderChecklists(task) {
+      const box = document.getElementById('modal-checklists');
+      const list = task.checklists || [];
+      const completed = list.filter(c => c.completed).length;
+      document.getElementById('checklist-progress').innerText = `${completed}/${list.length} completed`;
+
+      if (!list.length) {
+        box.innerHTML = `<div class="text-[11px] text-slate-500 italic">No checklist items yet.</div>`;
+        return;
+      }
+
+      box.innerHTML = list.map((c, i) => `
+        <div class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-800/60 cursor-pointer" onclick="toggleChecklist(${i})">
+          <input type="checkbox" ${c.completed ? 'checked' : ''} class="rounded text-sky-500 pointer-events-none">
+          <span class="${c.completed ? 'line-through text-slate-500' : 'text-slate-200'} text-[11px]">${c.text}</span>
+        </div>
+      `).join('');
+    }
+
+    function renderComments(task) {
+      const box = document.getElementById('modal-comments');
+      const comments = task.comments || [];
+      document.getElementById('modal-comment-count').innerText = comments.length;
+
+      if (!comments.length) {
+        box.innerHTML = `<div class="text-[11px] text-slate-500 italic text-center py-3">No comments yet. Start the conversation with your team below.</div>`;
+        return;
+      }
+
+      box.innerHTML = comments.map(c => `
+        <div class="bg-slate-900/90 p-2.5 rounded-xl border border-slate-800">
+          <div class="flex items-center justify-between text-[10px] text-slate-400 mb-1">
+            <span class="font-bold text-sky-400">${c.authorName}</span>
+            <span>${new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          </div>
+          <p class="text-slate-200 text-[11px] leading-relaxed">${c.text}</p>
+        </div>
+      `).join('');
+      box.scrollTop = box.scrollHeight;
+    }
+
+    async function postComment(e) {
+      e.preventDefault();
+      const input = document.getElementById('comment-input');
+      const text = input.value.trim();
+      if (!text || !currentActiveTask) return;
+
+      const res = await fetch(`/api/tasks/${currentActiveTask._id}/comments`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ text })
+      });
+      if (res.ok) {
+        const updatedTask = await res.json();
+        input.value = '';
+        currentActiveTask = updatedTask;
+        renderComments(updatedTask);
+        await loadBoard();
+      }
+    }
+
+    async function toggleChecklist(index) {
+      if (!currentActiveTask) return;
+      const res = await fetch(`/api/tasks/${currentActiveTask._id}/checklist/${index}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        currentActiveTask = updated;
+        renderChecklists(updated);
+        await loadBoard();
+      }
+    }
+
+    async function addChecklistItem(e) {
+      e.preventDefault();
+      const input = document.getElementById('new-checklist-text');
+      const text = input.value.trim();
+      if (!text || !currentActiveTask) return;
+
+      const res = await fetch(`/api/tasks/${currentActiveTask._id}/checklist`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ text })
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        input.value = '';
+        currentActiveTask = updated;
+        renderChecklists(updated);
+        await loadBoard();
+      }
+    }
+
+    function closeDetailModal() {
+      document.getElementById('task-detail-modal').classList.replace('flex', 'hidden');
+    }
+
+    // --- TEAM COLLABORATION (MEMBER INVITES) ---
+    function openMemberModal() { document.getElementById('member-modal').classList.replace('hidden', 'flex'); }
+    function closeMemberModal() { document.getElementById('member-modal').classList.replace('flex', 'hidden'); }
+
+    async function addTeamMember(e) {
+      e.preventDefault();
+      const email = document.getElementById('invite-email').value.trim();
+      if (!email) return;
+
+      const res = await fetch(`/api/projects/${projectId}/members`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ email })
+      });
+      if (res.ok) {
+        document.getElementById('invite-email').value = '';
+        await loadBoard();
+        alert(`Member ${email} invited! They can now access this workspace when logged in.`);
+      }
+    }
+
+    // --- DRAG AND DROP ---
     function handleDragStart(e, id) {
       draggedTaskId = id;
       e.dataTransfer.setData('text/plain', id);
@@ -263,6 +497,7 @@
         body: JSON.stringify({
           title: document.getElementById('task-title').value,
           description: document.getElementById('task-desc').value,
+          assignee: document.getElementById('task-assignee').value || 'Unassigned',
           priority: document.getElementById('task-priority').value,
           stage: document.getElementById('task-stage').value,
           projectId
