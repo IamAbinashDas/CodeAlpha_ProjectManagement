@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KINETIC // Architectural Flow Engine</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><rect width='7' height='9' x='3' y='3' rx='1'/><rect width='7' height='5' x='14' y='3' rx='1'/><rect width='7' height='9' x='14' y='12' rx='1'/><rect width='7' height='5' x='3' y='16' rx='1'/></svg>">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+    body { 
+      font-family: 'Plus Jakarta Sans', sans-serif; 
+      background-color: #0b0f19;
+      background-image: radial-gradient(#1e293b 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    .font-brand { font-family: 'Space Grotesk', sans-serif; }
+    .glass-nav {
+      background: rgba(11, 15, 25, 0.85);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glass-card {
+      background: rgba(17, 24, 39, 0.75);
+      backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .glass-card:hover {
+      border-color: rgba(56, 189, 248, 0.4);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 28px -8px rgba(56, 189, 248, 0.15);
+    }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col antialiased selection:bg-sky-500 selection:text-black">
+
+  <!-- Header -->
+  <header class="glass-nav sticky top-0 z-40 px-6 py-3.5 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="h-9 w-9 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 ring-1 ring-white/20">
+        <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="7" height="9" x="3" y="3" rx="1"/>
+          <rect width="7" height="5" x="14" y="3" rx="1"/>
+          <rect width="7" height="9" x="14" y="12" rx="1"/>
+          <rect width="7" height="5" x="3" y="16" rx="1"/>
+        </svg>
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-lg font-black tracking-wider bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent font-brand">KINETIC</span>
+          <span class="text-[9px] bg-sky-950 text-sky-400 border border-sky-800/40 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest">Flow Engine</span>
+        </div>
+        <span class="text-[10px] block font-semibold tracking-widest text-sky-400 uppercase -mt-0.5">Project Workspaces</span>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <div id="user-info" class="hidden items-center gap-3">
+        <div class="text-right">
+          <span id="user-name" class="block text-xs font-bold text-white leading-tight"></span>
+          <span id="user-role" class="block text-[10px] text-sky-400 font-mono leading-tight"></span>
+        </div>
+        <button onclick="logout()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition">Exit</button>
+      </div>
+      <button id="auth-btn" onclick="openAuthModal()" class="px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition shadow-lg shadow-sky-600/20">Access Workspace</button>
+    </div>
+  </header>
+
+  <!-- Workspace Dashboard -->
+  <main class="max-w-5xl mx-auto px-6 py-10 flex-1 w-full space-y-8">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-white font-brand">Engineering Workspaces</h1>
+        <p class="text-xs text-slate-400 mt-1">Select an active engineering cycle or launch a new initiative.</p>
+      </div>
+      <button onclick="openCreateModal()" class="px-4 py-2.5 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:opacity-90 text-white text-xs font-bold transition shadow-lg shadow-sky-600/20 flex items-center gap-2">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        <span>New Workspace</span>
+      </button>
+    </div>
+
+    <!-- Workspace Grid -->
+    <div id="projects-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div class="glass-card rounded-2xl p-6 text-center text-xs text-slate-500">Loading workspaces...</div>
+    </div>
+  </main>
+
+  <!-- New Project Modal -->
+  <div id="create-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="glass-card max-w-md w-full rounded-2xl p-6 border border-slate-700 shadow-2xl relative">
+      <button onclick="closeCreateModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">&times;</button>
+      <h2 class="text-base font-bold text-white mb-1">Create Engineering Workspace</h2>
+      <p class="text-slate-400 text-xs mb-4">Initialize a structured kanban project workflow</p>
+      <form onsubmit="handleCreateProject(event)" class="space-y-3">
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Project Name</label>
+          <input type="text" id="proj-title" placeholder="e.g. Distributed Mesh Consensus" required class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-sky-500">
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Project Code</label>
+          <input type="text" id="proj-code" placeholder="e.g. MESH" required maxlength="6" class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white uppercase outline-none focus:border-sky-500 font-mono">
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Description</label>
+          <textarea id="proj-desc" placeholder="Operational objectives and scope..." rows="2" class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-sky-500 resize-none"></textarea>
+        </div>
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 text-white font-bold text-xs shadow-lg shadow-sky-600/20">Launch Workspace</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Auth Modal -->
+  <div id="auth-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="glass-card max-w-sm w-full rounded-2xl p-6 border border-slate-700 shadow-2xl relative">
+      <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">&times;</button>
+      <h2 id="auth-title" class="text-base font-bold text-white mb-1">Access KINETIC</h2>
+      <p class="text-slate-400 text-xs mb-4">Authenticate engineering credentials</p>
+      <form onsubmit="handleAuth(event)" class="space-y-3">
+        <div id="reg-fields" class="space-y-3 hidden">
+          <input type="text" id="reg-name" placeholder="Full Name" class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-sky-500">
+          <input type="text" id="reg-role" placeholder="Role (e.g. Core Systems Engineer)" class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-sky-500">
+        </div>
+        <input type="email" id="auth-email" placeholder="Email Address" required class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-sky-500">
+        <input type="password" id="auth-password" placeholder="Password" required class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-sky-500">
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-lg shadow-sky-600/20">Sign In</button>
+      </form>
+      <p class="text-center text-xs text-slate-400 mt-4">
+        <span id="auth-switch-text">Need credentials?</span>
+        <button onclick="toggleAuth()" id="auth-switch-btn" class="text-sky-400 ml-1 font-semibold hover:underline">Register unit</button>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    let isRegister = false;
+    const token = localStorage.getItem('kinetic_token');
+    const user = JSON.parse(localStorage.getItem('kinetic_user') || 'null');
+
+    async function init() {
+      if (token && user) {
+        document.getElementById('auth-btn').classList.add('hidden');
+        document.getElementById('user-info').classList.remove('hidden');
+        document.getElementById('user-info').classList.add('flex');
+        document.getElementById('user-name').innerText = user.name;
+        document.getElementById('user-role').innerText = user.role || 'Engineer';
+        await loadProjects();
+      } else {
+        document.getElementById('projects-grid').innerHTML = `
+          <div class="col-span-full glass-card rounded-2xl p-10 text-center">
+            <i data-lucide="lock" class="w-8 h-8 text-sky-400 mx-auto mb-3"></i>
+            <h3 class="text-sm font-bold text-white mb-1">Authorization Required</h3>
+            <p class="text-xs text-slate-400 max-w-md mx-auto mb-4">Please log in to inspect or create engineering kanban boards.</p>
+            <button onclick="openAuthModal()" class="px-4 py-2 rounded-xl bg-sky-600 text-xs font-bold text-white">Authenticate</button>
+          </div>
+        `;
+      }
+      lucide.createIcons();
+    }
+
+    async function loadProjects() {
+      const res = await fetch('/api/projects', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const projects = await res.json();
+      const container = document.getElementById('projects-grid');
+
+      if (!projects.length) {
+        container.innerHTML = `
+          <div class="col-span-full glass-card rounded-2xl p-8 text-center text-xs text-slate-400">
+            No workspaces initialized. Click "New Workspace" above to launch one.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = projects.map(p => `
+        <div class="glass-card rounded-2xl p-6 flex flex-col justify-between group cursor-pointer" onclick="location.href='board.html?id=${p._id}'">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="text-[10px] font-mono font-bold bg-sky-950 text-sky-400 border border-sky-800/40 px-2.5 py-0.5 rounded-md">${p.code}</span>
+              <i data-lucide="arrow-up-right" class="w-4 h-4 text-slate-500 group-hover:text-sky-400 transition"></i>
+            </div>
+            <h3 class="text-base font-bold text-white font-brand group-hover:text-sky-300 transition mb-2">${p.title}</h3>
+            <p class="text-xs text-slate-400 line-clamp-2 leading-relaxed">${p.description}</p>
+          </div>
+          <div class="mt-5 pt-4 border-t border-slate-800 flex items-center justify-between text-[11px] text-slate-500">
+            <span>Kanban Board</span>
+            <span class="text-sky-400 font-semibold flex items-center gap-1">Open Board →</span>
+          </div>
+        </div>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function openCreateModal() {
+      if (!token) return openAuthModal();
+      document.getElementById('create-modal').classList.replace('hidden', 'flex');
+    }
+    function closeCreateModal() { document.getElementById('create-modal').classList.replace('flex', 'hidden'); }
+
+    async function handleCreateProject(e) {
+      e.preventDefault();
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          title: document.getElementById('proj-title').value,
+          code: document.getElementById('proj-code').value,
+          description: document.getElementById('proj-desc').value
+        })
+      });
+      if (res.ok) {
+        closeCreateModal();
+        loadProjects();
+      }
+    }
+
+    function openAuthModal() { document.getElementById('auth-modal').classList.replace('hidden', 'flex'); }
+    function closeAuthModal() { document.getElementById('auth-modal').classList.replace('flex', 'hidden'); }
+
+    function toggleAuth() {
+      isRegister = !isRegister;
+      document.getElementById('auth-title').innerText = isRegister ? 'Register Engineering Unit' : 'Access KINETIC';
+      document.getElementById('reg-fields').classList.toggle('hidden', !isRegister);
+      document.getElementById('auth-switch-text').innerText = isRegister ? 'Have an account?' : 'Need credentials?';
+      document.getElementById('auth-switch-btn').innerText = isRegister ? 'Sign in' : 'Register unit';
+    }
+
+    async function handleAuth(e) {
+      e.preventDefault();
+      const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
+      const body = {
+        email: document.getElementById('auth-email').value,
+        password: document.getElementById('auth-password').value
+      };
+      if (isRegister) {
+        body.name = document.getElementById('reg-name').value;
+        body.role = document.getElementById('reg-role').value;
+      }
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem('kinetic_token', data.token);
+        localStorage.setItem('kinetic_user', JSON.stringify(data.user));
+        location.reload();
+      } else {
+        alert(data.error);
+      }
+    }
+
+    function logout() {
+      localStorage.clear();
+      location.reload();
+    }
+
+    init();
+  </script>
+</body>
+</html>

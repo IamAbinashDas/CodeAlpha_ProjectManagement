@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KINETIC // Kanban Flow Board</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2338bdf8' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><rect width='7' height='9' x='3' y='3' rx='1'/><rect width='7' height='5' x='14' y='3' rx='1'/><rect width='7' height='9' x='14' y='12' rx='1'/><rect width='7' height='5' x='3' y='16' rx='1'/></svg>">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+    body { 
+      font-family: 'Plus Jakarta Sans', sans-serif; 
+      background-color: #0b0f19;
+      background-image: radial-gradient(#1e293b 1px, transparent 1px);
+      background-size: 24px 24px;
+    }
+    .font-brand { font-family: 'Space Grotesk', sans-serif; }
+    .glass-nav {
+      background: rgba(11, 15, 25, 0.85);
+      backdrop-filter: blur(18px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .kanban-lane {
+      background: rgba(17, 24, 39, 0.6);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      min-height: 550px;
+    }
+    .task-card {
+      background: rgba(26, 34, 52, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      cursor: grab;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .task-card:active { cursor: grabbing; }
+    .task-card:hover {
+      border-color: rgba(56, 189, 248, 0.4);
+      transform: translateY(-2px);
+    }
+    .lane-drag-over {
+      border-color: rgba(56, 189, 248, 0.8) !important;
+      background: rgba(14, 165, 233, 0.08) !important;
+    }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen flex flex-col antialiased">
+
+  <!-- Header Navigation -->
+  <header class="glass-nav sticky top-0 z-40 px-6 py-3.5 flex items-center justify-between">
+    <div class="flex items-center gap-4">
+      <a href="index.html" class="flex items-center gap-2 text-slate-400 hover:text-white transition text-xs font-semibold">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+        <span>Workspaces</span>
+      </a>
+      <div class="h-4 w-px bg-slate-800"></div>
+      <div>
+        <div class="flex items-center gap-2">
+          <span id="board-title" class="text-sm font-bold text-white font-brand">Loading...</span>
+          <span id="board-code" class="text-[9px] font-mono font-bold bg-sky-950 text-sky-400 border border-sky-800/40 px-2 py-0.5 rounded-md"></span>
+        </div>
+      </div>
+    </div>
+
+    <button onclick="openTaskModal()" class="px-3.5 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-bold transition shadow-lg shadow-sky-600/20 flex items-center gap-1.5">
+      <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+      <span>Add Task</span>
+    </button>
+  </header>
+
+  <!-- Kanban Grid Layout -->
+  <main class="flex-1 p-6 overflow-x-auto">
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-5 min-w-[900px] h-full">
+
+      <!-- Backlog -->
+      <div class="flex flex-col">
+        <div class="flex items-center justify-between mb-3 px-1">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">Backlog</h3>
+          </div>
+          <span id="count-backlog" class="text-[10px] font-mono text-slate-500">0</span>
+        </div>
+        <div id="lane-backlog" class="kanban-lane rounded-2xl p-3 space-y-3 flex-1" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'backlog')"></div>
+      </div>
+
+      <!-- In Progress -->
+      <div class="flex flex-col">
+        <div class="flex items-center justify-between mb-3 px-1">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-sky-400">In Progress</h3>
+          </div>
+          <span id="count-in_progress" class="text-[10px] font-mono text-slate-500">0</span>
+        </div>
+        <div id="lane-in_progress" class="kanban-lane rounded-2xl p-3 space-y-3 flex-1" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'in_progress')"></div>
+      </div>
+
+      <!-- Review -->
+      <div class="flex flex-col">
+        <div class="flex items-center justify-between mb-3 px-1">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-amber-300">Code Review</h3>
+          </div>
+          <span id="count-review" class="text-[10px] font-mono text-slate-500">0</span>
+        </div>
+        <div id="lane-review" class="kanban-lane rounded-2xl p-3 space-y-3 flex-1" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'review')"></div>
+      </div>
+
+      <!-- Done -->
+      <div class="flex flex-col">
+        <div class="flex items-center justify-between mb-3 px-1">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-400">Deployed / Done</h3>
+          </div>
+          <span id="count-done" class="text-[10px] font-mono text-slate-500">0</span>
+        </div>
+        <div id="lane-done" class="kanban-lane rounded-2xl p-3 space-y-3 flex-1" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event, 'done')"></div>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Create Task Modal -->
+  <div id="task-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="task-card max-w-md w-full rounded-2xl p-6 border border-slate-700 shadow-2xl relative">
+      <button onclick="closeTaskModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white text-lg">&times;</button>
+      <h2 class="text-base font-bold text-white mb-1">Create Kanban Task</h2>
+      <p class="text-slate-400 text-xs mb-4">Append an actionable task to the active workflow</p>
+      <form onsubmit="handleCreateTask(event)" class="space-y-3">
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Task Title</label>
+          <input type="text" id="task-title" placeholder="e.g. Audit WebSocket reconnect jitter" required class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-sky-500">
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Description</label>
+          <textarea id="task-desc" placeholder="Details and technical criteria..." rows="2" class="w-full px-3.5 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-sky-500 resize-none"></textarea>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Priority</label>
+            <select id="task-priority" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-sky-500">
+              <option value="Low">Low</option>
+              <option value="Medium" selected>Medium</option>
+              <option value="High">High</option>
+              <option value="Critical">Critical</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1">Target Stage</label>
+            <select id="task-stage" class="w-full px-3 py-2 rounded-xl bg-slate-900 border border-slate-700 text-xs text-white outline-none focus:border-sky-500">
+              <option value="backlog">Backlog</option>
+              <option value="in_progress">In Progress</option>
+              <option value="review">Code Review</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
+        </div>
+        <button type="submit" class="w-full py-2.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs shadow-lg shadow-sky-600/20">Append Task</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const token = localStorage.getItem('kinetic_token');
+    const projectId = new URLSearchParams(window.location.search).get('id');
+    let draggedTaskId = null;
+
+    if (!token || !projectId) window.location.href = 'index.html';
+
+    async function loadBoard() {
+      const res = await fetch(`/api/projects/${projectId}/tasks`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) return window.location.href = 'index.html';
+      const { project, tasks } = await res.json();
+
+      document.getElementById('board-title').innerText = project.title;
+      document.getElementById('board-code').innerText = project.code;
+
+      const lanes = { backlog: [], in_progress: [], review: [], done: [] };
+      tasks.forEach(t => {
+        if (lanes[t.stage]) lanes[t.stage].push(t);
+      });
+
+      ['backlog', 'in_progress', 'review', 'done'].forEach(stage => {
+        const laneEl = document.getElementById(`lane-${stage}`);
+        const countEl = document.getElementById(`count-${stage}`);
+        countEl.innerText = lanes[stage].length;
+
+        laneEl.innerHTML = lanes[stage].map(t => {
+          let badgeColor = "bg-slate-800 text-slate-300";
+          if (t.priority === 'Critical') badgeColor = "bg-rose-950 text-rose-400 border border-rose-800/40";
+          if (t.priority === 'High') badgeColor = "bg-amber-950 text-amber-400 border border-amber-800/40";
+          if (t.priority === 'Medium') badgeColor = "bg-sky-950 text-sky-400 border border-sky-800/40";
+
+          return `
+            <div class="task-card rounded-xl p-4 shadow" draggable="true" ondragstart="handleDragStart(event, '${t._id}')" id="task-${t._id}">
+              <div class="flex items-start justify-between gap-2 mb-2">
+                <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md ${badgeColor}">${t.priority}</span>
+                <button onclick="deleteTask('${t._id}')" class="text-slate-500 hover:text-rose-400 transition">&times;</button>
+              </div>
+              <h4 class="text-xs font-bold text-white mb-1.5 leading-snug">${t.title}</h4>
+              ${t.description ? `<p class="text-[11px] text-slate-400 line-clamp-2 leading-relaxed mb-3">${t.description}</p>` : ''}
+              <div class="flex items-center justify-between text-[10px] text-slate-500 border-t border-slate-700/60 pt-2.5">
+                <span>${t.assignee}</span>
+                <span class="font-mono">${t.dueDate}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+      });
+      lucide.createIcons();
+    }
+
+    // Drag and Drop Logic
+    function handleDragStart(e, id) {
+      draggedTaskId = id;
+      e.dataTransfer.setData('text/plain', id);
+    }
+    function handleDragOver(e) {
+      e.preventDefault();
+      e.currentTarget.classList.add('lane-drag-over');
+    }
+    function handleDragLeave(e) {
+      e.currentTarget.classList.remove('lane-drag-over');
+    }
+    async function handleDrop(e, targetStage) {
+      e.preventDefault();
+      e.currentTarget.classList.remove('lane-drag-over');
+      if (!draggedTaskId) return;
+
+      const res = await fetch(`/api/tasks/${draggedTaskId}/stage`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ stage: targetStage })
+      });
+      if (res.ok) {
+        draggedTaskId = null;
+        await loadBoard();
+      }
+    }
+
+    async function deleteTask(id) {
+      if (!confirm("Remove this task?")) return;
+      const res = await fetch(`/api/tasks/${id}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) await loadBoard();
+    }
+
+    function openTaskModal() { document.getElementById('task-modal').classList.replace('hidden', 'flex'); }
+    function closeTaskModal() { document.getElementById('task-modal').classList.replace('flex', 'hidden'); }
+
+    async function handleCreateTask(e) {
+      e.preventDefault();
+      const res = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          title: document.getElementById('task-title').value,
+          description: document.getElementById('task-desc').value,
+          priority: document.getElementById('task-priority').value,
+          stage: document.getElementById('task-stage').value,
+          projectId
+        })
+      });
+      if (res.ok) {
+        closeTaskModal();
+        document.getElementById('task-title').value = '';
+        document.getElementById('task-desc').value = '';
+        await loadBoard();
+      }
+    }
+
+    loadBoard();
+  </script>
+</body>
+</html>
